@@ -12,7 +12,7 @@ type Config struct {
 func Load() *Config {
 	return &Config{
 		Port:          getEnv("PORT", "8080"),
-		MySQLDSN:      getEnv("MYSQL_DSN", "admin:admin@tcp(mysql:3306)/weather-db"),
+		MySQLDSN:      getEnv("MYSQL_DSN", "admin:admin@tcp(mysql:3306)/weather-db?charset=utf8mb4&parseTime=true&loc=Local"),
 		RedisAddr:     getEnv("REDIS_ADDR", "redis:6379"),
 		RedisPassword: getEnv("REDIS_PASSWORD", ""),
 	}

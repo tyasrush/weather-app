@@ -22,7 +22,7 @@ func (h *commonHandler) HealthCheck() http.HandlerFunc {
 	return func(w http.ResponseWriter, r *http.Request) {
 		w.Header().Set("Content-Type", "application/json")
 
-		resp := dto.HealthResponse{Status: "success", Message: "App running!"}
+		resp := dto.HealthResponse{Status: "success", Message: "app running!"}
 		err := json.NewEncoder(w).Encode(resp)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)
@@ -43,7 +43,7 @@ func (h *commonHandler) ReadyCheck() http.HandlerFunc {
 			return
 		}
 
-		resp := dto.HealthResponse{Status: "success", Message: "All resource running!"}
+		resp := dto.HealthResponse{Status: "success", Message: "all resource running!"}
 		err := json.NewEncoder(w).Encode(resp)
 		if err != nil {
 			http.Error(w, err.Error(), http.StatusInternalServerError)

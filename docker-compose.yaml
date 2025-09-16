@@ -8,6 +8,7 @@ services:
       MYSQL_DATABASE: weather-db
       MYSQL_USER: admin
       MYSQL_PASSWORD: admin
+      TZ: Asia/Jakarta
     ports:
       - "3306:3306"
     volumes:
@@ -38,7 +39,7 @@ services:
       redis:
         condition: service_healthy
     environment:
-      MYSQL_DSN: "admin:admin@tcp(mysql:3306)/weather-db"
+      MYSQL_DSN: "admin:admin@tcp(mysql:3306)/weather-db?charset=utf8mb4&parseTime=true&loc=Local"
       REDIS_ADDR: "redis:6379"
       PORT: "8080"
     ports:
