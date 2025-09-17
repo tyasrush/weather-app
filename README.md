@@ -21,6 +21,8 @@ This is a weather application that provides weather forecasts for various locati
 ## IMPROVEMENTS
 Due to limited time, here are some improvements note.
 1. Endpoint `POST /weathers/sync` slow, need to improve it's performance by implement concurrent process with goroutine or other async method.
+1. Batching process on worker to avoid overheat CPU when insert to database.
+1. Implement fallback when external api server down or failed.
 
 ## ENDPOINTS
 
