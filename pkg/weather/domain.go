@@ -2,7 +2,7 @@ package weather
 
 type ForecastResponse struct {
 	Location Location `json:"location"`
-	Current  Current  `json:"current"`
+	Current  Hour     `json:"current"`
 	Forecast Forecast `json:"forecast"`
 }
 
@@ -16,12 +16,13 @@ type Location struct {
 	Localtime string  `json:"localtime"`
 }
 
-type Current struct {
-	LastUpdated string    `json:"last_updated"`
-	TempC       float64   `json:"temp_c"`
-	Condition   Condition `json:"condition"`
-	Humidity    int       `json:"humidity"`
-	WindKph     float64   `json:"wind_kph"`
+type Hour struct {
+	ForecastTime string    `json:"time"`
+	TempC        float64   `json:"temp_c"`
+	TempF        float64   `json:"temp_f"`
+	Condition    Condition `json:"condition"`
+	Humidity     int       `json:"humidity"`
+	WindKph      float64   `json:"wind_kph"`
 }
 
 type Forecast struct {
@@ -29,15 +30,19 @@ type Forecast struct {
 }
 
 type ForecastDay struct {
-	Date string `json:"date"`
-	Day  Day    `json:"day"`
+	Date  string `json:"date"`
+	Day   Day    `json:"day"`
+	Hours []Hour `json:"hour"`
 }
 
 type Day struct {
-	MaxtempC  float64   `json:"maxtemp_c"`
-	MintempC  float64   `json:"mintemp_c"`
-	AvgtempC  float64   `json:"avgtemp_c"`
-	Condition Condition `json:"condition"`
+	MaxtempC    float64   `json:"maxtemp_c"`
+	MintempC    float64   `json:"mintemp_c"`
+	AvgtempC    float64   `json:"avgtemp_c"`
+	AvgtempF    float64   `json:"avgtemp_f"`
+	AvgHumidity float64   `json:"avghumidity"`
+	MaxWindKPH  float64   `json:"avgmaxwind_kph"`
+	Condition   Condition `json:"condition"`
 }
 
 type Condition struct {

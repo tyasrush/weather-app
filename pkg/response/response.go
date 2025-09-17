@@ -33,6 +33,6 @@ func JSON[T any](w http.ResponseWriter, statusCode int, status, message string, 
 }
 
 func Error(w http.ResponseWriter, statusCode int, message string) {
-	log.Println("error : ", message)
+	log.Println("[ERROR LOG] error occurred : ", message)
 	JSON[any](w, statusCode, "error", message, nil)
 }

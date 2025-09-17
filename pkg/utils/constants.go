@@ -2,7 +2,12 @@ package utils
 
 import "time"
 
-const DefaultDBTimeout time.Duration = 5 * time.Second
+const (
+	DefaultDBTimeout   time.Duration = 5 * time.Second
+	DateFormat         string        = "2006-01-02"
+	DateFormatWithHour string        = "2006-01-02 15:04"
+	WeatherLocationKey string        = "weather:location:%d"
+)
 
 const (
 	OrderByCreatedAtAsc  = "created_at_ascend"

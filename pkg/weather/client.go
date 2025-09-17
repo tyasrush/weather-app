@@ -7,18 +7,18 @@ import (
 	"time"
 )
 
-type ClientInterface interface {
-	GetForecast(location string, days int) (*ForecastResponse, error)
+type WeatherAPIClientInterface interface {
+	GetForecast(location string, day int) (*ForecastResponse, error)
 }
 
-type Client struct {
+type WeatherAPIClient struct {
 	APIKey  string
 	BaseURL string
 	HTTP    *http.Client
 }
 
-func NewClient(apiKey, baseURL string) ClientInterface {
-	return &Client{
+func NewClient(apiKey, baseURL string) WeatherAPIClientInterface {
+	return &WeatherAPIClient{
 		APIKey:  apiKey,
 		BaseURL: baseURL,
 		HTTP: &http.Client{
@@ -27,9 +27,13 @@ func NewClient(apiKey, baseURL string) ClientInterface {
 	}
 }
 
-func (c *Client) GetForecast(location string, days int) (*ForecastResponse, error) {
-	url := fmt.Sprintf("%s/forecast.json?key=%s&q=%s&days=%d&aqi=no&alerts=no",
-		c.BaseURL, c.APIKey, location, days)
+func (c *WeatherAPIClient) GetForecast(location string, day int) (*ForecastResponse, error) {
+	if day == 0 {
+		day = 14
+	}
+
+	url := fmt.Sprintf("%s/forecast.json?key=%s&q=%s&days=%d",
+		c.BaseURL, c.APIKey, location, day)
 
 	resp, err := c.HTTP.Get(url)
 	if err != nil {

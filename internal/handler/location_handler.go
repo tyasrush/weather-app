@@ -70,6 +70,12 @@ func (h *locationHandler) CreateLocationHandler() http.HandlerFunc {
 			return
 		}
 
+		err := req.Validate()
+		if err != nil {
+			response.Error(w, http.StatusBadRequest, "invalid request body: "+err.Error())
+			return
+		}
+
 		result, err := h.locationUc.CreateLocationUsecase(ctx, req)
 		if err != nil {
 			response.Error(w, http.StatusInternalServerError, "failed to insert location: "+err.Error())

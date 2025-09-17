@@ -9,6 +9,7 @@ import (
 )
 
 type GetLocationsParam struct {
+	ID       int
 	NameLike string
 	Limit    int
 	Offset   int
@@ -33,45 +34,50 @@ func (r *locationRepository) GetLocations(ctx context.Context, param GetLocation
 	ctx, cancel := context.WithTimeout(ctx, utils.DefaultDBTimeout)
 	defer cancel()
 
-	query := `SELECT * FROM locations `
-	statement := ""
+	query := `SELECT * FROM locations WHERE deleted_at IS NULL`
 	params := []interface{}{}
+	if param.ID > 0 {
+		query = query + " AND id = ?"
+		params = append(params, param.ID)
+	}
+
 	if param.NameLike != "" {
-		query = query + "WHERE name ILIKE %?%"
+		query = query + " AND name ILIKE %?%"
 		params = append(params, param.NameLike)
 	}
 
 	if param.OrderBy != "" {
-		ascStatement := "ORDER BY %s ASC"
-		descStatement := "ORDER BY %s DESC"
+		ascStatement := " ORDER BY %s ASC"
+		descStatement := " ORDER BY %s DESC"
+		statement := ""
 		switch param.OrderBy {
 		case utils.OrderByCreatedAtAsc:
-			statement = statement + fmt.Sprintf(ascStatement, "created_at")
+			query = query + fmt.Sprintf(ascStatement, "created_at")
 		case utils.OrderByCreatedAtDesc:
-			statement = statement + fmt.Sprintf(descStatement, "created_at")
+			statement = fmt.Sprintf(descStatement, "created_at")
 		case utils.OrderByNameAsc:
-			statement = statement + fmt.Sprintf(ascStatement, "name")
+			statement = fmt.Sprintf(ascStatement, "name")
 		case utils.OrderByNameDesc:
-			statement = statement + fmt.Sprintf(descStatement, "name")
+			statement = fmt.Sprintf(descStatement, "name")
 		default:
-			statement = statement + fmt.Sprintf(ascStatement, "created_at")
+			statement = fmt.Sprintf(ascStatement, "created_at")
 		}
+		query = query + statement
 	}
 
 	if param.Limit > 0 {
-		statement = statement + "LIMIT ?"
+		query = query + " LIMIT ?"
 		params = append(params, param.Limit)
 	}
 
 	if param.Offset > 0 {
-		statement = statement + "OFFSET ?"
+		query = query + " OFFSET ?"
 		params = append(params, param.Offset)
 	}
 
-	query = query + statement
 	rows, err := r.db.QueryContext(ctx, query, params...)
 	if err != nil {
-		return nil, fmt.Errorf("execute query locations: %w", err)
+		return nil, fmt.Errorf("failed to execute query locations: %w", err)
 	}
 	defer rows.Close()
 
@@ -88,7 +94,7 @@ func (r *locationRepository) GetLocations(ctx context.Context, param GetLocation
 			&item.CreatedAt,
 			&item.LastModifiedAt,
 			&item.DeletedAt); err != nil {
-			return nil, fmt.Errorf("scan location: %w", err)
+			return nil, fmt.Errorf("failed to scan location: %w", err)
 		}
 		locations = append(locations, item)
 	}
@@ -104,12 +110,12 @@ func (r *locationRepository) InsertLocation(ctx context.Context, location domain
 		location.Name, location.Region, location.Country, location.Latitude, location.Longitude,
 	)
 	if err != nil {
-		return location, fmt.Errorf("insert location: %w", err)
+		return location, fmt.Errorf("failed to insert location: %w", err)
 	}
 
 	id, err := res.LastInsertId()
 	if err != nil {
-		return location, fmt.Errorf("get last insert id: %w", err)
+		return location, fmt.Errorf("failed to get last insert id: %w", err)
 	}
 
 	location.ID = id
@@ -124,7 +130,7 @@ func (r *locationRepository) GetLocationsCount(ctx context.Context) (int, error)
 	query := "SELECT COUNT(*) FROM locations"
 	err := r.db.QueryRowContext(ctx, query).Scan(&count)
 	if err != nil {
-		return 0, fmt.Errorf("get locations count: %w", err)
+		return 0, fmt.Errorf("failed to get locations count: %w", err)
 	}
 
 	return count, err
