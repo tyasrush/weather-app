@@ -4,6 +4,7 @@ import "time"
 
 const (
 	DefaultDBTimeout   time.Duration = 5 * time.Second
+	DefaultHTTPTimeout time.Duration = 10 * time.Second
 	DateFormat         string        = "2006-01-02"
 	DateFormatWithHour string        = "2006-01-02 15:04"
 	WeatherLocationKey string        = "weather:location:%d"

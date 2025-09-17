@@ -1,4 +1,3 @@
-version: "3.9"
 services:
   mysql:
     image: mysql:8.0
@@ -13,36 +12,9 @@ services:
       - "3306:3306"
     volumes:
       - ./migrations:/docker-entrypoint-initdb.d
-    healthcheck:
-      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
 
   redis:
     image: redis:7
     container_name: weather-redis
     ports:
       - "6379:6379"
-    healthcheck:
-      test: ["CMD", "redis-cli", "ping"]
-      interval: 5s
-      timeout: 5s
-      retries: 5
-
-  app:
-    build: .
-    container_name: weather-server
-    depends_on:
-      mysql:
-        condition: service_healthy
-      redis:
-        condition: service_healthy
-    environment:
-      MYSQL_DSN: "admin:admin@tcp(mysql:3306)/weather-db?charset=utf8mb4&parseTime=true&loc=Local"
-      REDIS_ADDR: "redis:6379"
-      PORT: "8080"
-      WEATHER_API_KEY: "936179ff3e964f4f863154129251509"
-      WEATHER_API_BASE_URL: "https://api.weatherapi.com/v1"
-    ports:
-      - "8080:8080"

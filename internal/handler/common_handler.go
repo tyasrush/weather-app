@@ -5,17 +5,16 @@ import (
 	"encoding/json"
 	"net/http"
 	"tyarus/weather-app/internal/dto"
-
-	"github.com/redis/go-redis/v9"
+	"tyarus/weather-app/internal/infra"
 )
 
 type commonHandler struct {
-	db          *sql.DB
-	redisClient *redis.Client
+	db    *sql.DB
+	cache infra.CacheInterface
 }
 
-func NewCommonHandler(db *sql.DB, redisClient *redis.Client) commonHandler {
-	return commonHandler{db: db, redisClient: redisClient}
+func NewCommonHandler(db *sql.DB, cache infra.CacheInterface) commonHandler {
+	return commonHandler{db: db, cache: cache}
 }
 
 func (h *commonHandler) HealthCheck() http.HandlerFunc {
@@ -38,7 +37,7 @@ func (h *commonHandler) ReadyCheck() http.HandlerFunc {
 			http.Error(w, "MySQL not reachable", http.StatusInternalServerError)
 			return
 		}
-		if _, err := h.redisClient.Ping(r.Context()).Result(); err != nil {
+		if err := h.cache.Ping(r.Context()); err != nil {
 			http.Error(w, "Redis not reachable", http.StatusInternalServerError)
 			return
 		}

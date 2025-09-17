@@ -5,16 +5,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
-	"log"
 	"time"
 	"tyarus/weather-app/internal/domain"
 	"tyarus/weather-app/internal/dto"
+	"tyarus/weather-app/internal/infra"
 	"tyarus/weather-app/internal/repository"
 	"tyarus/weather-app/pkg/response"
 	"tyarus/weather-app/pkg/utils"
 	"tyarus/weather-app/pkg/weather"
-
-	"github.com/redis/go-redis/v9"
 )
 
 type WeatherUsecaseInterface interface {
@@ -25,14 +23,14 @@ type WeatherUsecaseInterface interface {
 type weatherUsecase struct {
 	weatherRepo      repository.WeatherRepositoryInterface
 	locationRepo     repository.LocationRepositoryInterface
-	cache            *redis.Client
+	cache            infra.CacheInterface
 	weatherAPIClient weather.WeatherAPIClientInterface
 }
 
 func NewWeatherUsecase(
 	weatherRepo repository.WeatherRepositoryInterface,
 	locationRepo repository.LocationRepositoryInterface,
-	cache *redis.Client,
+	cache infra.CacheInterface,
 	weatherAPIClient weather.WeatherAPIClientInterface,
 ) WeatherUsecaseInterface {
 	return &weatherUsecase{
@@ -63,66 +61,76 @@ func (u *weatherUsecase) SyncWeatherUsecase(ctx context.Context, req dto.PostWea
 		req.ForecastDayTotal = 14 // max day from weather api
 	}
 
+	ctx, cancel := context.WithCancel(ctx)
+	defer cancel()
+
 	for _, location := range locations {
-		forecast, err := u.weatherAPIClient.GetForecast(location.Name, req.ForecastDayTotal)
+		err := u.syncWeatherForLocation(ctx, location, req.ForecastDayTotal)
 		if err != nil {
-			log.Printf("Failed to get forecast for location %s: %v", location.Name, err)
+			fmt.Printf("failed to sync weather for location %s: %v", location.Name, err)
+			return err
+		}
+
+		fmt.Printf("sync weather data success: %s\n", location.Name)
+	}
+
+	return nil
+}
+
+func (u *weatherUsecase) syncWeatherForLocation(ctx context.Context, location domain.Location, forecastDayTotal int) error {
+	forecast, err := u.weatherAPIClient.GetForecast(ctx, location.Name, forecastDayTotal)
+	if err != nil {
+		return fmt.Errorf("failed to get forecast for location %s: %w", location.Name, err)
+	}
+
+	var weathers []domain.Weather
+	for _, day := range forecast.Forecast.Forecastday {
+		forecastTime, err := time.Parse(utils.DateFormat, day.Date)
+		if err != nil {
+			fmt.Printf("Failed to parse forecast date %s: %v", day.Date, err)
 			continue
 		}
 
-		var weathers []domain.Weather
-		for _, day := range forecast.Forecast.Forecastday {
-			fmt.Println("date: ", day.Date)
-			forecastTime, err := time.Parse(utils.DateFormat, day.Date)
+		forecastWeather := domain.Weather{
+			LocationID:            location.ID,
+			TemperatureCelcius:    day.Day.AvgtempC,
+			TemperatureFahrenheit: day.Day.AvgtempF,
+			Humidity:              int(day.Day.AvgHumidity),
+			WindSpeed:             day.Day.MaxWindKPH,
+			ConditionStatus:       day.Day.Condition.Text,
+			ConditionIconURL:      day.Day.Condition.Icon,
+			ForecastTime:          forecastTime,
+			ForecastType:          domain.ForecastTypeDay,
+		}
+
+		weathers = append(weathers, forecastWeather)
+
+		for _, item := range day.Hours {
+			forecastHourTime, err := time.Parse(utils.DateFormatWithHour, item.ForecastTime)
 			if err != nil {
-				log.Printf("Failed to parse forecast date %s: %v", day.Date, err)
+				fmt.Printf("Failed to parse forecast hour time %s: %v", item.ForecastTime, err)
 				continue
 			}
 
 			forecastWeather := domain.Weather{
 				LocationID:            location.ID,
-				TemperatureCelcius:    day.Day.AvgtempC,
-				TemperatureFahrenheit: day.Day.AvgtempF,
-				Humidity:              int(day.Day.AvgHumidity),
-				WindSpeed:             day.Day.MaxWindKPH,
-				ConditionStatus:       day.Day.Condition.Text,
-				ConditionIconURL:      day.Day.Condition.Icon,
-				ForecastTime:          forecastTime,
-				ForecastType:          domain.ForecastTypeDay,
+				TemperatureCelcius:    item.TempC,
+				TemperatureFahrenheit: item.TempF,
+				Humidity:              int(item.Humidity),
+				WindSpeed:             item.WindKph,
+				ConditionStatus:       item.Condition.Text,
+				ConditionIconURL:      item.Condition.Icon,
+				ForecastTime:          forecastHourTime,
+				ForecastType:          domain.ForecastTypeHour,
 			}
 
 			weathers = append(weathers, forecastWeather)
-
-			for _, item := range day.Hours {
-				forecastHourTime, err := time.Parse(utils.DateFormatWithHour, item.ForecastTime)
-				if err != nil {
-					log.Printf("Failed to parse forecast hour time %s: %v", item.ForecastTime, err)
-					continue
-				}
-
-				forecastWeather := domain.Weather{
-					LocationID:            location.ID,
-					TemperatureCelcius:    item.TempC,
-					TemperatureFahrenheit: item.TempF,
-					Humidity:              int(item.Humidity),
-					WindSpeed:             item.WindKph,
-					ConditionStatus:       item.Condition.Text,
-					ConditionIconURL:      item.Condition.Icon,
-					ForecastTime:          forecastHourTime,
-					ForecastType:          domain.ForecastTypeHour,
-				}
-
-				weathers = append(weathers, forecastWeather)
-			}
 		}
+	}
 
-		_, err = u.weatherRepo.BulkUpsertWeather(ctx, weathers)
-		if err != nil {
-			log.Printf("Failed to bulk upsert weather data %s: %v", location.Name, err)
-			continue
-		}
-
-		log.Printf("sync weather data success: %s", location.Name)
+	_, err = u.weatherRepo.BulkUpsertWeather(ctx, weathers)
+	if err != nil {
+		return fmt.Errorf("failed to bulk upsert weather data for location %s: %w", location.Name, err)
 	}
 
 	return nil
@@ -146,7 +154,7 @@ func (u *weatherUsecase) GetWeathersUsecase(ctx context.Context, param dto.GetWe
 	}
 
 	cacheKey := fmt.Sprintf(utils.WeatherLocationKey, param.LocationID)
-	cachedData, err := u.cache.Get(ctx, cacheKey).Result()
+	cachedData, err := u.cache.Get(ctx, cacheKey)
 	if err == nil {
 		var weatherResponse dto.GetWeatherResponse
 		if err := json.Unmarshal([]byte(cachedData), &weatherResponse); err == nil {
@@ -185,7 +193,9 @@ func (u *weatherUsecase) GetWeathersUsecase(ctx context.Context, param dto.GetWe
 
 	forecast := []dto.GetWeatherResponseItem{}
 	currentTimeWeather := dto.GetWeatherResponseItem{}
-	var currentTimeDuration time.Duration = 0
+	var minTimeDiff time.Duration
+	foundCurrentTime := false
+
 	for _, item := range weathers[1:] {
 		itemResponse := dto.GetWeatherResponseItem{
 			ForecastTime:          item.ForecastTime,
@@ -202,11 +212,18 @@ func (u *weatherUsecase) GetWeathersUsecase(ctx context.Context, param dto.GetWe
 			LastModifiedAt: item.LastModifiedAt.Time,
 		}
 
-		if currentTimeDuration == 0 ||
-			(time.Now().Day() == item.ForecastTime.Day() &&
-				time.Now().Sub(item.ForecastTime) < currentTimeDuration) {
-			currentTimeWeather = itemResponse
-			currentTimeDuration = time.Now().Sub(item.ForecastTime)
+		if item.ForecastTime.Truncate(24 * time.Hour).Equal(time.Now().Truncate(24 * time.Hour)) {
+			timeDiff := time.Now().Sub(item.ForecastTime)
+			absTimeDiff := timeDiff
+			if absTimeDiff < 0 {
+				absTimeDiff = -absTimeDiff
+			}
+
+			if !foundCurrentTime || absTimeDiff < minTimeDiff {
+				currentTimeWeather = itemResponse
+				minTimeDiff = absTimeDiff
+				foundCurrentTime = true
+			}
 		}
 
 		forecast = append(forecast, itemResponse)
@@ -220,9 +237,9 @@ func (u *weatherUsecase) GetWeathersUsecase(ctx context.Context, param dto.GetWe
 
 	cacheData, err := json.Marshal(weatherResponse)
 	if err == nil {
-		err = u.cache.Set(ctx, cacheKey, cacheData, 10*time.Minute).Err()
+		err = u.cache.Set(ctx, cacheKey, cacheData, 10*time.Minute)
 		if err != nil {
-			log.Printf("Failed to set cache: %v", err)
+			fmt.Printf("Failed to set cache: %v", err)
 		}
 	}
 

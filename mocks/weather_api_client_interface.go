@@ -3,6 +3,7 @@
 package mocks
 
 import (
+	context "context"
 	weather "tyarus/weather-app/pkg/weather"
 
 	mock "github.com/stretchr/testify/mock"
@@ -13,9 +14,9 @@ type WeatherAPIClientInterface struct {
 	mock.Mock
 }
 
-// GetForecast provides a mock function with given fields: location, day
-func (_m *WeatherAPIClientInterface) GetForecast(location string, day int) (*weather.ForecastResponse, error) {
-	ret := _m.Called(location, day)
+// GetForecast provides a mock function with given fields: ctx, location, day
+func (_m *WeatherAPIClientInterface) GetForecast(ctx context.Context, location string, day int) (*weather.ForecastResponse, error) {
+	ret := _m.Called(ctx, location, day)
 
 	if len(ret) == 0 {
 		panic("no return value specified for GetForecast")
@@ -23,19 +24,19 @@ func (_m *WeatherAPIClientInterface) GetForecast(location string, day int) (*wea
 
 	var r0 *weather.ForecastResponse
 	var r1 error
-	if rf, ok := ret.Get(0).(func(string, int) (*weather.ForecastResponse, error)); ok {
-		return rf(location, day)
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) (*weather.ForecastResponse, error)); ok {
+		return rf(ctx, location, day)
 	}
-	if rf, ok := ret.Get(0).(func(string, int) *weather.ForecastResponse); ok {
-		r0 = rf(location, day)
+	if rf, ok := ret.Get(0).(func(context.Context, string, int) *weather.ForecastResponse); ok {
+		r0 = rf(ctx, location, day)
 	} else {
 		if ret.Get(0) != nil {
 			r0 = ret.Get(0).(*weather.ForecastResponse)
 		}
 	}
 
-	if rf, ok := ret.Get(1).(func(string, int) error); ok {
-		r1 = rf(location, day)
+	if rf, ok := ret.Get(1).(func(context.Context, string, int) error); ok {
+		r1 = rf(ctx, location, day)
 	} else {
 		r1 = ret.Error(1)
 	}

@@ -25,7 +25,7 @@ func main() {
 	cache := infra.InitCache(cfg.RedisAddr, cfg.RedisPassword)
 	defer cache.Close()
 
-	weatherAPIClient := weather.NewClient(cfg.WeatherAPIKey, cfg.WeatherAPIBaseURL)
+	weatherAPIClient := weather.NewClient(*cfg)
 
 	locationRepo := repository.NewLocationRepository(db)
 	weatherRepo := repository.NewWeatherRepository(db)

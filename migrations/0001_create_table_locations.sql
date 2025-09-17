@@ -24,6 +24,7 @@ END$$
 DELIMITER ;
 
 -- seed data to make testing more efficient. not recommended implementation, but good to go for now 
-INSERT INTO locations(name, region, country, latitude, longitude) VALUES('Jakarta', 'DKI Jakarta', 'Indonesia', -6.2088, 106.8456);
-INSERT INTO locations(name, region, country, latitude, longitude) VALUES('Bandung', 'West Java', 'Indonesia', -6.9175, 107.6191);
-INSERT INTO locations(name, region, country, latitude, longitude) VALUES('Surabaya', 'East Java', 'Indonesia', -7.2575, 112.7521);
+INSERT INTO locations(name, region, country, latitude, longitude) 
+  VALUES ('Jakarta', 'DKI Jakarta', 'Indonesia', -6.2088, 106.8456),
+          ('Bandung', 'West Java', 'Indonesia', -6.9175, 107.6191),
+          ('Surabaya', 'East Java', 'Indonesia', -7.2575, 112.7521);
