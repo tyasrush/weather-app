@@ -124,8 +124,8 @@ func (r *weatherRepository) BulkUpsertWeather(ctx context.Context, weathers []do
 	defer stmt.Close()
 
 	upsertedWeathers := make([]domain.Weather, len(weathers))
-	for i, weather := range weathers {
-		result, err := stmt.ExecContext(
+	for _, weather := range weathers {
+		_, err := stmt.ExecContext(
 			ctx,
 			weather.LocationID,
 			weather.TemperatureCelcius,
@@ -140,22 +140,6 @@ func (r *weatherRepository) BulkUpsertWeather(ctx context.Context, weathers []do
 		if err != nil {
 			return nil, fmt.Errorf("failed to upsert weather: %w", err)
 		}
-
-		id, err := result.LastInsertId()
-		if err != nil {
-			// just in case the insert id not working
-			var existingID int64
-			err = tx.QueryRowContext(ctx,
-				"SELECT id FROM weathers WHERE location_id = ? AND forecast_time = ? AND forecast_type = ?",
-				weather.LocationID, weather.ForecastTime, weather.ForecastType).Scan(&existingID)
-			if err != nil {
-				return nil, fmt.Errorf("failed to get weather id: %w", err)
-			}
-			id = existingID
-		}
-
-		weather.ID = id
-		upsertedWeathers[i] = weather
 	}
 
 	if err = tx.Commit(); err != nil {

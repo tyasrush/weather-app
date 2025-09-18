@@ -53,7 +53,15 @@ Due to limited time, here are some improvements note.
 - `make docker-compose-down` - Stop docker services
 
 ## CONFIGURATION
-
+- `PORT` - Application port (default: 8080)
+- `MYSQL_DSN` - MySQL Data Source Name (default: admin:admin@tcp(localhost:3306)/weather-db?charset=utf8mb4&parseTime=true&loc=Local)
+- `REDIS_ADDR` - Redis ip address (default: locatlho:6379)
+- `REDIS_PASSWORD` - Redis password
+- `WEATHER_API_BASE_URL` - Weather API Base URL (default: https://api.weatherapi.com/v1)
+- `WEATHER_API_KEY` - Weather API Key to fetch data, generate apikey from your account here https://www.weatherapi.com/
+- `BACKOFF_MAX_RETRIES` - Max retries for exponential backoff (default: 3)
+- `BACKOFF_BASE_DELAY` - Initial wait duration for exponential backoff (default: 200ms)
+- `BACKOFF_MAX_DELAY` - Max wait duration for exponential backoff (default: 5sec)
 - `WORKER_PERIOD` - Period between sync operations in time duration type (default: 15min)
 - `WORKER_LIMIT` - Maximum number of locations to sync (default: 10)
 
